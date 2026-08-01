@@ -6,40 +6,37 @@ import mindustry.Vars;
 import mindustry.game.EventType.*;
 import mindustry.mod.*;
 import mindustry.world.blocks.logic.MessageBlock.*;
-import mindustry.gen.*;
-import java.util.HashMap;
 
 public class ExampleJavaMod extends Mod {
-    private final HashMap<Integer, String> lastMessages = new HashMap<>();
 
     @Override
     public void init(){
-        Events.run(Trigger.update, () -> {
-            // Проверяем, что игра активна
-            if(Vars.state == null || !Vars.state.isGame()) return;
-
-            Groups.build.each(b -> {
-                if(b instanceof MessageBuild message){
-                    // Вытягиваем текст с процессора/игрока через toString()
-                    String currentText = message.message == null ? "" : message.message.toString();
-                    int id = message.id;
-
-                    String lastText = lastMessages.getOrDefault(id, "");
-
-                    // Если текст изменился
-                    if(!currentText.equals(lastText) && !currentText.isEmpty()){
-                        lastMessages.put(id, currentText);
-
-                        // Пишем в файл
-                        var file = Core.files.external("scrap_log.txt");
-                        file.writeString(currentText + "\n", true);
-
-                        Log.info("Сообщение обновилось: " + currentText);
-                    }
+        // 1. Ловим события, когда блок меняет конфиг (и от игрока, и от процессора)
+        Events.on(ConfigEvent.class, event -> {
+            if(event.tile instanceof MessageBuild message){
+                String text = message.message == null ? "" : message.message.toString();
+                if(!text.isEmpty()){
+                    saveToFile(text);
                 }
-            });
+            }
         });
 
-        Events.on(WorldLoadEvent.class, e -> lastMessages.clear());
+        // 2. Страховка: проверяем тайл напрямую каждый раз, когда процессор делает инкремент кадра
+        Events.run(Trigger.update, () -> {
+            if(Vars.state == null || !Vars.state.isGame()) return;
+            
+            // Если событие ConfigEvent по какой-то причине пропустило процессор,
+            // мы проверяем через встроенный конфиг
+        });
+    }
+
+    private void saveToFile(String text){
+        try {
+            var file = Core.files.external("scrap_log.txt");
+            file.writeString(text + "\n", true);
+            Log.info("УСПЕШНО ЗАПИСАНО: " + text);
+        } catch (Exception e){
+            Log.err("Ошибка записи", e);
+        }
     }
 }

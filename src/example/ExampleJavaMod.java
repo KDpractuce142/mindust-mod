@@ -2,6 +2,7 @@ package example;
 
 import arc.*;
 import arc.util.*;
+import mindustry.Vars;
 import mindustry.game.EventType.*;
 import mindustry.mod.*;
 import mindustry.world.blocks.logic.MessageBlock.*;
@@ -13,19 +14,16 @@ public class ExampleJavaMod extends Mod {
 
     @Override
     public void init(){
-        // Слушаем обновление каждого кадра
         Events.run(Trigger.update, () -> {
-            // Если мы не в игре или карта не загружена — ничего не делаем
+            // Проверяем, что игра активна
             if(Vars.state == null || !Vars.state.isGame()) return;
 
             Groups.build.each(b -> {
-                // Проверяем, что постройка — это MessageBlock
                 if(b instanceof MessageBuild message){
-                    // В Mindustry нативный метод получения текущего текста сообщения — это .config() или message.message
-                    Object config = message.config();
-                    String currentText = config != null ? config.toString() : "";
-
+                    // Вытягиваем текст с процессора/игрока через toString()
+                    String currentText = message.message == null ? "" : message.message.toString();
                     int id = message.id;
+
                     String lastText = lastMessages.getOrDefault(id, "");
 
                     // Если текст изменился
@@ -36,13 +34,12 @@ public class ExampleJavaMod extends Mod {
                         var file = Core.files.external("scrap_log.txt");
                         file.writeString(currentText + "\n", true);
 
-                        Log.info("Message update: " + currentText);
+                        Log.info("Сообщение обновилось: " + currentText);
                     }
                 }
             });
         });
 
-        // Сбрасываем кэш при загрузке новой карты
         Events.on(WorldLoadEvent.class, e -> lastMessages.clear());
     }
 }

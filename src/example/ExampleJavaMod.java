@@ -6,7 +6,7 @@ import mindustry.game.EventType.*;
 import mindustry.mod.*;
 import mindustry.world.blocks.logic.MessageBlock.*;
 
-public class ExampleMod extends Mod {
+public class ExampleJavaMod extends Mod {
     @Override
     public void init(){
         Events.on(ConfigEvent.class, event -> {

@@ -11,7 +11,8 @@ public class ExampleJavaMod extends Mod {
     public void init(){
         Events.on(ConfigEvent.class, event -> {
             if(event.tile instanceof MessageBuild message){
-                Core.files.external("scrap_log.txt").appendString(message.message + "\n");
+                // В Arc метод записи с дозаписью выглядит так: writeString(текст, append)
+                Core.files.external("scrap_log.txt").writeString(message.message + "\n", true);
                 Log.info("Записано в log: " + message.message);
             }
         });

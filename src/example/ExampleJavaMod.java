@@ -5,38 +5,43 @@ import arc.util.*;
 import mindustry.Vars;
 import mindustry.game.EventType.*;
 import mindustry.mod.*;
-import mindustry.world.blocks.logic.MessageBlock.*;
+import mindustry.world.blocks.logic.MemoryBlock.*;
+import mindustry.gen.*;
+import java.util.HashMap;
 
 public class ExampleJavaMod extends Mod {
+    // Храним последнее прочитанное значение для каждой ячейки памяти по её ID
+    private final HashMap<Integer, Double> lastValues = new HashMap<>();
 
     @Override
     public void init(){
-        // 1. Ловим события, когда блок меняет конфиг (и от игрока, и от процессора)
-        Events.on(ConfigEvent.class, event -> {
-            if(event.tile instanceof MessageBuild message){
-                String text = message.message == null ? "" : message.message.toString();
-                if(!text.isEmpty()){
-                    saveToFile(text);
-                }
-            }
-        });
-
-        // 2. Страховка: проверяем тайл напрямую каждый раз, когда процессор делает инкремент кадра
         Events.run(Trigger.update, () -> {
             if(Vars.state == null || !Vars.state.isGame()) return;
-            
-            // Если событие ConfigEvent по какой-то причине пропустило процессор,
-            // мы проверяем через встроенный конфиг
-        });
-    }
 
-    private void saveToFile(String text){
-        try {
-            var file = Core.files.external("scrap_log.txt");
-            file.writeString(text + "\n", true);
-            Log.info("УСПЕШНО ЗАПИСАНО: " + text);
-        } catch (Exception e){
-            Log.err("Ошибка записи", e);
-        }
+            Groups.build.each(b -> {
+                // Проверяем, что постройка — это MemoryCell или MemoryBank
+                if(b instanceof MemoryBuild memory){
+                    // Читаем значение из ячейки [0]
+                    double currentValue = memory.memory[0];
+                    int id = memory.id;
+
+                    double lastValue = lastValues.getOrDefault(id, -999999.0);
+
+                    // Если число в ячейке [0] изменилось
+                    if(currentValue != lastValue){
+                        lastValues.put(id, currentValue);
+
+                        // Пишем значение в файл
+                        var file = Core.files.external("scrap_log.txt");
+                        file.writeString(currentValue + "\n", true);
+
+                        Log.info("Память cell1[0] изменилась: " + currentValue);
+                    }
+                }
+            });
+        });
+
+        // Очищаем кэш при перезапуске карты
+        Events.on(WorldLoadEvent.class, e -> lastValues.clear());
     }
 }
